@@ -1,0 +1,236 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/io.dart';
+import 'dart:convert';
+import 'createLobby.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'SeasideAR',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Lobby> lobbyList = []; // Liste des lobbies récupérée depuis le backend
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLobbyList(); // Récupérer la liste des lobbies lors du chargement initial
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('SeasideAR'),
+      ),
+      body: Column(
+        children: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LobbyCreationPage(),
+                ),
+              ).then((value) {
+                if (value != null && value) {
+                  fetchLobbyList();
+                }
+              });
+            },
+            child: Text('Lobby erstellen'),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: lobbyList.length,
+              itemBuilder: (context, index) {
+                final lobby = lobbyList[index];
+                return ListTile(
+                  title: Text(
+                    lobby.lobbyName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  subtitle: Text('Users: ${lobby.users.join(", ")}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.login, color: Colors.blue),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              LobbyPage(lobbyName: lobby.lobbyName),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> fetchLobbyList() async {
+    final url =
+        Uri.parse('http://195.37.49.59:8080/ar-23-backend/api/battleship/list');
+    final response = await http.get(url);
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      final List<dynamic> lobbyDataList = responseData as List<dynamic>;
+
+      setState(() {
+        lobbyList = lobbyDataList
+            .map<Lobby>((lobbyData) => Lobby.fromJson(lobbyData))
+            .toList();
+      });
+    } else {
+      print(
+          'Fehler beim Abrufen der Lobbyliste. Statuscode: ${response.statusCode}');
+    }
+  }
+
+  Future<void> createLobby(BuildContext context) async {
+    // Code pour créer un lobby
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Lobby erstellen'),
+        content: Text('Funktion zum Erstellen eines Lobbies'),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class Lobby {
+  final String lobbyName;
+  final List<String> users;
+
+  Lobby({
+    required this.lobbyName,
+    required this.users,
+  });
+
+  factory Lobby.fromJson(Map<String, dynamic> json) {
+    return Lobby(
+      lobbyName: json['lobbyName'] ?? '',
+      users: List<String>.from(
+          json['users']?.map((user) => user['userName']) ?? []),
+    );
+  }
+}
+
+class LobbyPage extends StatelessWidget {
+  final String lobbyName;
+
+  const LobbyPage({required this.lobbyName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Lobby: $lobbyName'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            joinLobby(context);
+          },
+          child: Text('Lobby beitreten'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> joinLobby(BuildContext context) async {
+    final url = Uri.parse(
+        'http://195.37.49.59:8080/ar-23-backend/api/battleship/enter');
+    final headers = {'Content-Type': 'application/json'};
+    final body = jsonEncode({
+      'lobbyName': lobbyName,
+      'appId': '0',
+      'username': 'friday1',
+    });
+
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      final socketURL = responseData['socketURL'];
+
+      final channel = IOWebSocketChannel.connect(socketURL);
+      channel.stream.listen((message) {
+        print('Eingehende Nachricht: $message');
+      });
+
+      print('Erfolgreich der Lobby $lobbyName beigetreten.');
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Erfolgreich beigetreten'),
+          content: Text('Sie sind der Lobby $lobbyName beigetreten.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      print(
+          'Fehler beim Beitreten der Lobby $lobbyName. Statuscode: ${response.statusCode}');
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Fehler beim Beitreten'),
+          content: Text(
+              'Beim Beitreten zur Lobby $lobbyName ist ein Fehler aufgetreten.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}

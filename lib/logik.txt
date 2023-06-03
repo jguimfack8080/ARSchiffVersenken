@@ -1,0 +1,45 @@
+Lobby erstellen:        /api/battleship/create
+Lobby beitreten:        /api/battleship/enter
+Lobby zuschauen:        /api/battleship/spectate
+Lobbies auflisten:      /api/battleship/list
+Schiff positionieren:   /api/battleship/place
+
+
+Auf den Terminal mit dem curl Befehl kann man das wie folgt testen: Hier ein paar Beispiele.
+
+Lobby erstellen: 
+curl -i -H 'Content-Type: application/json' -d '{"lobbyName":"ARCORE2","appId":"20","username":"AR"}' -X POST 195.37.49.59:8080/ar-23-backend/api/battleship/create
+HTTP/1.1 201
+Content-Type: application/json
+Content-Length: 225
+Date: Fri, 02 Jun 2023 22:26:57 GMT
+
+{"columns":10,"rows":10,"ships":[{"size":2,"amount":4},{"size":3,"amount":3},{"size":4,"amount":2},{"size":5,"amount":1}],"socketURL":"ws://195.37.49.59:8080/ar-23-backend/api/battleship/socket/ARCORE2","lobbyName":"ARCORE2"}    
+
+Lobby beitreten: $ curl -i -H 'Content-Type: application/json' -d '{"lobbyName":"hallo2","appId":"2","username":"Hey"}' -X POST 195.37.49.59:8080/ar-23-backend/api/battleship/enter
+HTTP/1.1 200 
+Content-Type: application/json
+Content-Length: 271
+Date: Fri, 02 Jun 2023 21:39:09 GMT
+
+{"columns":10,"rows":10,"ships":[{"size":2,"amount":4},{"size":3,"amount":3},{"size":4,"amount":2},{"size":5,"amount":1}],"socketURL":"ws://195.37.49.59:8080/ar-23-backend/api/battleship/socket/hallo2","lobbyName":"hallo2","users":[{"userName":"Hey"},{"userName":"Hey"}]}
+
+Lobby auflisten:  curl -i 195.37.49.59:8080/ar-23-backend/api/battleship/list
+HTTP/1.1 200 
+Content-Type: application/json
+Content-Length: 980
+Date: Fri, 02 Jun 2023 22:44:05 GMT
+
+[{"lobbyName":"","users":[{"userName":"friday2"}]},{"lobbyName":"lobbySonne2","users":[{"userName":"AR"}]},{"lobbyName":"lobbyTest","users":[{"userName":"friday1"}]},{"lobbyName":"Haöl","users":[{"userName":"Sonne"}]},{"lobbyName":"lobbySonne","users":[{"userName":"AR"},{"userName":"Sonne"}]},{"lobbyName":"AR","users":[{"userName":"AR"}]},{"lobbyName":"halloExist","users":[{"userName":"friday2"},{"userName":"AR"}]},{"lobbyName":"Friday","users":[{"userName":"friday2"}]},{"lobbyName":"ARCORE2","users":[{"userName":"AR"},{"userName":"AR"}]},{"lobbyName":"hallo1","users":[{"userName":"AR"},{"userName":"Sonne"}]},{"lobbyName":"halloLobby2","users":[{"userName":"user5"},{"userName":"AR"}]},{"lobbyName":"hallo123213","users":[{"userName":"Sonne"}]},{"lobbyName":"hallo2","users":[{"userName":"AR"},{"userName":"Sonne"}]},{"lobbyName":"testLobby","users":[{"userName":"testUser2"},{"userName":"testUser"}]},{"lobbyName":"ARCORE","users":[{"userName":"AR"},{"userName":"AR"}]}]
+
+Shiff positionieren: curl -i -H 'Content-Type: application/json' -d '{"lobbyName":"hallo1","appId":"1","ships":[{"size":2,"row":0,"column":0,"horizontal":true},{"size":2,"row":1,"column":0,"horizontal":true},{"size":2,"row":3,"column":0,"horizontal":true},{"size":2,"row":4,"column":0,"horizontal":true},{"size":3,"row":5,"column":0,"horizontal":true},{"size":3,"row":6,"column":0,"horizontal":true},{"size":3,"row":7,"column":0,"horizontal":true},{"size":4,"row":8,"column":0,"horizontal":true},{"size":4,"row":9,"column":0,"horizontal":true},{"size":5,"row":0,"column":8,"horizontal":false}]}' -X POST 195.37.49.59:8080/ar-23-backend/api/battleship/place
+
+Websocket: Feld beschießen
+Über REST:
+
+Spiel erstellen (mit Spieler 1)
+Spiel beitreten (mit Spieler 2)
+Schiffe platzieren (jeweils Spieler 1 & 2)
+Dann über die Socket-URL in den Serverantworten mit dem Socket verbinden und Nachrichten verschicken, zum Beispiel an die URL ws://195.37.49.59:8080/ar-23-backend/api/battleship/socket/hallo1 
+
+{"action": "shoot","appId": "1","row": 1,"column": 1,"stateId": 1}

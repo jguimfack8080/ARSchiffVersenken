@@ -1,0 +1,110 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:convert';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Battleship',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  IOWebSocketChannel? channel;
+
+  @override
+  void dispose() {
+    channel?.sink.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Battleship'),
+      ),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: joinLobby,
+          child: Text('Lobby beitreten'),
+        ),
+      ),
+    );
+  }
+
+  Future<void> joinLobby() async {
+    final url = Uri.parse('http://195.37.49.59:8080/ar-23-backend/api/battleship/enter');
+    final headers = {'Content-Type': 'application/json'};
+    final body = jsonEncode({
+      'lobbyName': 'ARCORE2',
+      'appId': '0',
+      'username': 'AR',
+    });
+
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      final socketURL = responseData['socketURL'];
+
+      channel = IOWebSocketChannel.connect(socketURL);
+      channel?.stream.listen((message) {
+        print('Eingehende Nachricht: $message');
+      });
+
+      print('Erfolgreich der Lobby beigetreten.');
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Erfolgreich beigetreten'),
+          content: Text('Sie sind der Lobby beigetreten.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      print('Fehler beim Beitreten der Lobby. Statuscode: ${response.statusCode}');
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text('Fehler beim Beitreten'),
+          content: Text('Beim Beitreten zur Lobby ist ein Fehler aufgetreten.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+}
