@@ -61,7 +61,7 @@ class LobbyPage extends StatelessWidget {
     final headers = {'Content-Type': 'application/json'};
     final username = usernameController.text.trim();
     final appId = Uuid().v4(); // Génère un appId unique à l'aide de l'UUID
-
+    print(appId); 
     if (username.isEmpty) {
       showDialog(
         context: context,
